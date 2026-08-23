@@ -1,7 +1,8 @@
+import json
 import random
 import textwrap
+import requests
 import streamlit as st
-from openai import OpenAI
 
 # ============================================================
 # V-STUDY AI
@@ -445,30 +446,14 @@ st.markdown(
 
 
 # ============================================================
-# OPENAI CLIENT
-# ============================================================
-
-try:
-    api_key = st.secrets.get("OPENAI_API_KEY")
-except Exception:
-    api_key = None
-
-client = None
-
-if api_key:
-    try:
-        client = OpenAI(api_key=api_key)
-    except Exception:
-        client = None
-
-
-# ============================================================
 # AI FUNCTION
 # ============================================================
 
 def ask_ai(user_prompt, selected_tool):
 
-    if not client:
+    api_key = st.secrets.get("OPENAI_API_KEY")
+
+    if not api_key:
         return (
             "⚠️ **OpenAI API key not configured.**\n\n"
             "Add your key to Streamlit Secrets as:\n\n"
@@ -505,21 +490,37 @@ Tool instructions:
 Always prioritize understanding over simply giving an answer.
 """
 
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    payload = {
+        "model": "gpt-4o-mini",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "max_tokens": 1500,
+        "temperature": 0.65
+    }
+
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=1500,
-            temperature=0.65
+        response = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=20
         )
+        data = response.json()
 
-        answer = response.choices[0].message.content
+        if "error" in data:
+            return f"❌ **OpenAI API Error:** `{data['error'].get('message', 'Unknown error')}`"
 
-        if not answer:
-            answer = "I couldn't generate an answer. Please try again."
+        if "choices" not in data or not data["choices"]:
+            return "⚠️ Couldn't generate an answer. Please try again."
+
+        answer = data["choices"][0]["message"]["content"]
 
         st.session_state.chat_history.append(
             {
@@ -535,7 +536,7 @@ Always prioritize understanding over simply giving an answer.
         return (
             "❌ **Something went wrong.**\n\n"
             f"`{error}`\n\n"
-            "Please check your API key, model access and internet connection."
+            "Please check your API key, model access, and internet connection."
         )
 
 

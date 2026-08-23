@@ -1,5 +1,7 @@
 import random
+import textwrap
 import streamlit as st
+from openai import OpenAI
 
 # ============================================================
 # V-STUDY AI
@@ -284,20 +286,17 @@ EXAMPLES = {
 with st.sidebar:
 
     st.markdown(
-        """
-        <div style="
-            text-align:center;
-            padding:10px 0 20px 0;
-        ">
-            <div style="font-size:42px;">🎓</div>
-            <h2 style="margin:0;">V-Study AI</h2>
-            <p style="opacity:.7;">
-                Learn smarter.<br>
-                Study better.<br>
-                Achieve more.
-            </p>
-        </div>
-        """,
+        textwrap.dedent("""
+            <div style="text-align:center; padding:10px 0 20px 0;">
+                <div style="font-size:42px;">🎓</div>
+                <h2 style="margin:0;">V-Study AI</h2>
+                <p style="opacity:.7;">
+                    Learn smarter.<br>
+                    Study better.<br>
+                    Achieve more.
+                </p>
+            </div>
+        """),
         unsafe_allow_html=True,
     )
 
@@ -362,10 +361,7 @@ else:
 st.markdown(
     f"""
     <style>
-
-    @import url(
-        'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap'
-    );
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
     .stApp {{
         background: {background};
@@ -390,20 +386,9 @@ st.markdown(
         padding: 30px;
         border-radius: 28px;
         margin-bottom: 25px;
-
-        background:
-            linear-gradient(
-                135deg,
-                {theme["primary"]}22,
-                {theme["secondary"]}22
-            );
-
-        border:
-            1px solid
-            {theme["primary"]}44;
-
-        box-shadow:
-            0 15px 40px rgba(0,0,0,.06);
+        background: linear-gradient(135deg, {theme["primary"]}22, {theme["secondary"]}22);
+        border: 1px solid {theme["primary"]}44;
+        box-shadow: 0 15px 40px rgba(0,0,0,.06);
     }}
 
     .hero-title {{
@@ -422,45 +407,26 @@ st.markdown(
         padding: 20px;
         border-radius: 22px;
         background: {card_background};
-        border:
-            1px solid
-            {theme["primary"]}22;
-
+        border: 1px solid {theme["primary"]}22;
         margin: 12px 0;
-
-        box-shadow:
-            0 8px 30px rgba(0,0,0,.04);
+        box-shadow: 0 8px 30px rgba(0,0,0,.04);
     }}
 
     .ai-response {{
         padding: 24px;
         border-radius: 20px;
-
         background: {card_background};
-
-        border-left:
-            5px solid
-            {theme["primary"]};
-
-        box-shadow:
-            0 10px 30px rgba(0,0,0,.06);
-
+        border-left: 5px solid {theme["primary"]};
+        box-shadow: 0 10px 30px rgba(0,0,0,.06);
         line-height: 1.75;
-
         white-space: pre-wrap;
     }}
 
     .history-card {{
         padding: 18px;
         border-radius: 16px;
-
-        background:
-            {theme["primary"]}10;
-
-        border:
-            1px solid
-            {theme["primary"]}22;
-
+        background: {theme["primary"]}10;
+        border: 1px solid {theme["primary"]}22;
         margin-bottom: 12px;
     }}
 
@@ -472,7 +438,6 @@ st.markdown(
     textarea {{
         border-radius: 16px !important;
     }}
-
     </style>
     """,
     unsafe_allow_html=True,
@@ -541,9 +506,8 @@ Always prioritize understanding over simply giving an answer.
 """
 
     try:
-        # Standard OpenAI Chat Completion request
         response = client.chat.completions.create(
-            model="gpt-5-mini",  # Switched to gpt-5-mini per request (use gpt-4o-mini if fallback needed)
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -580,23 +544,19 @@ Always prioritize understanding over simply giving an answer.
 # ============================================================
 
 st.markdown(
-    f"""
-    <div class="hero">
-
-        <div style="font-size:18px;">
-            ✨ Your personal AI study partner
+    textwrap.dedent(f"""
+        <div class="hero">
+            <div style="font-size:18px;">
+                ✨ Your personal AI study partner
+            </div>
+            <div class="hero-title">
+                V-Study AI
+            </div>
+            <div class="hero-subtitle">
+                Learn smarter. Study better. Achieve more. 🚀
+            </div>
         </div>
-
-        <div class="hero-title">
-            V-Study AI
-        </div>
-
-        <div class="hero-subtitle">
-            Learn smarter. Study better. Achieve more. 🚀
-        </div>
-
-    </div>
-    """,
+    """),
     unsafe_allow_html=True,
 )
 
@@ -606,19 +566,16 @@ st.markdown(
 # ============================================================
 
 st.markdown(
-    f"""
-    <div class="tool-card">
-
-        <h2 style="margin:0;">
-            ✨ {tool}
-        </h2>
-
-        <p style="color:{muted_text};">
-            Use V-Study AI to make your study session easier.
-        </p>
-
-    </div>
-    """,
+    textwrap.dedent(f"""
+        <div class="tool-card">
+            <h2 style="margin:0;">
+                ✨ {tool}
+            </h2>
+            <p style="color:{muted_text};">
+                Use V-Study AI to make your study session easier.
+            </p>
+        </div>
+    """),
     unsafe_allow_html=True,
 )
 
@@ -645,11 +602,11 @@ if tool == "Motivation Booster":
         quote = random.choice(quotes)
 
         st.markdown(
-            f"""
-            <div class="ai-response">
-                {quote}
-            </div>
-            """,
+            textwrap.dedent(f"""
+                <div class="ai-response">
+                    {quote}
+                </div>
+            """),
             unsafe_allow_html=True,
         )
 
@@ -708,11 +665,11 @@ else:
 
             st.markdown("### 🤖 V-Study AI")
             st.markdown(
-                f"""
-                <div class="ai-response">
-                    {answer}
-                </div>
-                """,
+                textwrap.dedent(f"""
+                    <div class="ai-response">
+                        {answer}
+                    </div>
+                """),
                 unsafe_allow_html=True,
             )
 
@@ -724,15 +681,15 @@ else:
 if st.session_state.chat_history:
     st.divider()
     st.markdown("### 📜 Previous Responses")
-    
+
     for item in reversed(st.session_state.chat_history):
         st.markdown(
-            f"""
-            <div class="history-card">
-                <strong>🛠️ Tool:</strong> {item['tool']}<br>
-                <strong>💬 Question:</strong> {item['you']}<br><br>
-                <strong>🤖 Answer:</strong><br>{item['ai']}
-            </div>
-            """,
+            textwrap.dedent(f"""
+                <div class="history-card">
+                    <strong>🛠️ Tool:</strong> {item['tool']}<br>
+                    <strong>💬 Question:</strong> {item['you']}<br><br>
+                    <strong>🤖 Answer:</strong><br>{item['ai']}
+                </div>
+            """),
             unsafe_allow_html=True,
         )

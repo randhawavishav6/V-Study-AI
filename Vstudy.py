@@ -78,8 +78,7 @@ def ask_ai(prompt):
     }
 
     payload = {
-        "model": 
-"​gpt-5-mini",
+        "model": "gpt-4o-mini",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 1500,
         "temperature": 0.65
@@ -90,15 +89,14 @@ def ask_ai(prompt):
                           headers=headers, data=json.dumps(payload), timeout=20)
         data = r.json()
 
+        if "error" in data:
+            return f"❌ OpenAI API Error: {data['error'].get('message', 'Unknown error')}"
+
         if "choices" not in data:
             return "⚠️ Bestie, I think the AI fainted 😭."
 
         reply = data["choices"][0]["message"]["content"]
         st.session_state.chat_history.append({"you": prompt, "ai": reply})
-
-        # auto-clear input box
-        st.session_state["clear_input"] = True
-
         return reply
 
     except Exception as e:
@@ -110,9 +108,6 @@ def ask_ai(prompt):
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-if "clear_input" not in st.session_state:
-    st.session_state.clear_input = False
-
 if tool != "Mini IQ Test Game 🧠":
     st.markdown(f"<h1 style='text-align:center;'>✨ {tool} ✨</h1>", unsafe_allow_html=True)
 
@@ -120,27 +115,21 @@ if tool != "Mini IQ Test Game 🧠":
         st.markdown(f"**You:** {chat['you']}")
         st.markdown(f"**Genie:** {chat['ai']}")
 
-    # auto-clear after send
-    default_text = "" if st.session_state.clear_input else st.session_state.get("last_prompt", "")
-    prompt = st.text_area("Type your message 💬", value=default_text)
-    st.session_state.last_prompt = prompt
+    prompt = st.text_area("Type your message 💬")
 
     if st.button("Send"):
         if prompt.strip() != "":
-            st.session_state.clear_input = True
-            response = ask_ai(f"{tool}: {prompt}")
-            st.markdown(f"**Genie:** {response}")
-            st.session_state.last_prompt = ""
+            with st.spinner("Genie is thinking..."):
+                response = ask_ai(f"{tool}: {prompt}")
+            st.rerun()
 
     if st.button("Clear Chat History"):
         st.session_state.chat_history = []
-        st.session_state.last_prompt = ""
-        st.session_state.clear_input = True
         st.rerun()
 
 
 # =====================================================
-# 🧠 NEW IQ TEST GAME WITH 25 REAL QUESTIONS
+# 🧠 MINI IQ TEST GAME WITH 25 REAL QUESTIONS
 # =====================================================
 if tool == "Mini IQ Test Game 🧠":
     st.markdown("<h1 style='text-align:center;'>🧠 Mini IQ Test (K-Edition)</h1>", unsafe_allow_html=True)

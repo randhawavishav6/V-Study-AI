@@ -1,748 +1,342 @@
-import random
 import streamlit as st
+import requests
+import json
+import random
+import time
 
-# ============================================================
-# V-STUDY AI
-# Personal AI Study Assistant
-# Created by Vishav
-# ============================================================
+# ---------------------------------------------------
+# PAGE SETUP + LIGHT SOFT BACKGROUND + CUTE GEN Z FONT
+# ---------------------------------------------------
 
-st.set_page_config(
-    page_title="V-Study AI",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+st.set_page_config(page_title="StudyGenie Ultra", layout="wide")
 
-# ============================================================
-# SESSION STATE
-# ============================================================
+custom_css = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-
-# ============================================================
-# THEMES
-# ============================================================
-
-THEMES = {
-    "Pink Pastel": {
-        "background": "#fff1f5",
-        "sidebar": "#ffe3ec",
-        "primary": "#ec4899",
-        "secondary": "#f9a8d4",
-        "card": "#ffffff",
-        "text": "#1f1720",
-    },
-    "Sky Blue": {
-        "background": "#eff8ff",
-        "sidebar": "#dff1ff",
-        "primary": "#2563eb",
-        "secondary": "#93c5fd",
-        "card": "#ffffff",
-        "text": "#172033",
-    },
-    "Lavender": {
-        "background": "#f5f3ff",
-        "sidebar": "#ebe5ff",
-        "primary": "#7c3aed",
-        "secondary": "#c4b5fd",
-        "card": "#ffffff",
-        "text": "#211735",
-    },
-    "Doraemon": {
-        "background": "#eef8ff",
-        "sidebar": "#d8f0ff",
-        "primary": "#1689e8",
-        "secondary": "#67c4ff",
-        "card": "#ffffff",
-        "text": "#10243a",
-    },
+html, body, [data-testid="stAppViewContainer"] {
+    background: linear-gradient(170deg, #dff3ff, #f5dfff, #ffe6f2);
+    background-size: cover !important;
+    background-attachment: fixed !important;
+    font-family: 'Poppins', sans-serif !important;
+    color: #333;
 }
 
-
-# ============================================================
-# TOOLS
-# ============================================================
-
-TOOLS = [
-    "AI Doubt Solver",
-    "Notes Generator",
-    "Summary Maker",
-    "Timetable Builder",
-    "Motivation Booster",
-    "Flashcards",
-    "Brain-Dump Cleaner",
-    "Answer Checker",
-    "AI Planner",
-    "Mindset Reset",
-    "Study Routine Designer",
-    "Exam Strategy Maker",
-    "Personal Study Coach",
-]
-
-
-# ============================================================
-# TOOL PROMPTS
-# ============================================================
-
-TOOL_INSTRUCTIONS = {
-
-    "AI Doubt Solver": """
-You are solving a student's academic doubt.
-
-Explain the answer clearly and step-by-step.
-Start with the direct answer.
-Then explain the reasoning.
-Give a simple example when useful.
-Finish with a short exam tip if appropriate.
-""",
-
-    "Notes Generator": """
-Create clean, exam-oriented study notes.
-
-Use:
-- Clear headings
-- Important definitions
-- Key points
-- Examples
-- Formulas where relevant
-- Exam tips
-
-Do not make unnecessary filler.
-""",
-
-    "Summary Maker": """
-Summarize the student's material.
-
-Keep the important information.
-Remove repetition.
-Use short headings and bullet points.
-Make it easy to revise before an exam.
-""",
-
-    "Timetable Builder": """
-Create a realistic study timetable.
-
-Consider:
-- Available study time
-- Subjects
-- Breaks
-- Difficult subjects
-- Revision
-- Practice questions
-
-Avoid unrealistic schedules.
-""",
-
-    "Motivation Booster": """
-Give the student a short motivational boost.
-
-Be encouraging but realistic.
-Do not use empty motivational clichés.
-Give them one practical action they can take immediately.
-""",
-
-    "Flashcards": """
-Create useful active-recall flashcards.
-
-Format each card as:
-
-Card 1
-Q:
-A:
-
-Keep questions concise and answers accurate.
-""",
-
-    "Brain-Dump Cleaner": """
-Organize the student's messy thoughts into a clear action plan.
-
-Separate:
-1. Urgent
-2. Important
-3. Later
-
-Then provide the recommended order of action.
-""",
-
-    "Answer Checker": """
-Check the student's answer academically.
-
-Provide:
-- What is correct
-- What is missing
-- What is incorrect
-- How to improve it
-- A better model answer when useful
-
-Do not be unnecessarily harsh.
-""",
-
-    "AI Planner": """
-Create a practical study plan.
-
-Break the goal into manageable tasks.
-Include priorities, revision and practice.
-Avoid overloading a single day.
-""",
-
-    "Mindset Reset": """
-Give a short study mindset reset.
-
-Help the student stop overthinking and focus on the next small action.
-Keep it calm, practical and encouraging.
-""",
-
-    "Study Routine Designer": """
-Design a realistic daily study routine.
-
-Include:
-- Start routine
-- Study blocks
-- Short breaks
-- Difficult subjects
-- Revision
-- End-of-day review
-""",
-
-    "Exam Strategy Maker": """
-Create a high-impact exam strategy.
-
-Include:
-- What to study first
-- Revision method
-- Practice strategy
-- Time management
-- Common mistakes to avoid
-- Exam-day strategy
-""",
-
-    "Personal Study Coach": """
-Act as a supportive academic coach.
-
-Understand the student's problem.
-Give practical advice.
-Avoid unrealistic productivity advice.
-End with a simple next step.
-""",
+.section {
+    background: rgba(255, 255, 255, 0.45);
+    padding: 25px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.4);
+    margin-top: 20px;
+    backdrop-filter: blur(10px);
 }
 
-
-# ============================================================
-# EXAMPLES
-# ============================================================
-
-EXAMPLES = {
-
-    "AI Doubt Solver":
-        "Explain opportunity cost with a simple Class 12 example.",
-
-    "Notes Generator":
-        "Make exam notes for Class 12 Business Studies: Principles of Management.",
-
-    "Summary Maker":
-        "Summarize Human Capital Formation in India for Class 12 Economics.",
-
-    "Timetable Builder":
-        "I have 5 hours today and need to study Accounts, Business Studies and Economics.",
-
-    "Flashcards":
-        "Create 10 flashcards for Class 12 Economics: Money and Banking.",
-
-    "Brain-Dump Cleaner":
-        "I have homework, revision, a test and a project. Help me organize everything.",
-
-    "Answer Checker":
-        "Student answer: Opportunity cost is the cost of choosing one thing over another.\n\nCorrect answer: Opportunity cost is the value of the next best alternative foregone when a choice is made.",
-
-    "AI Planner":
-        "Create a 30-day Class 12 exam preparation plan.",
-
-    "Mindset Reset":
-        "I am procrastinating and need to start studying.",
-
-    "Study Routine Designer":
-        "I can study 4 hours every weekday.",
-
-    "Exam Strategy Maker":
-        "Create a strategy for my Class 12 Economics exam.",
-
-    "Personal Study Coach":
-        "I keep procrastinating and get distracted while studying.",
+h1, h2, h3 {
+    font-weight: 700;
+    font-style: italic;
 }
 
-
-# ============================================================
-# SIDEBAR
-# ============================================================
-
-with st.sidebar:
-
-    st.markdown(
-        """
-        <div style="
-            text-align:center;
-            padding:10px 0 20px 0;
-        ">
-            <div style="font-size:42px;">🎓</div>
-            <h2 style="margin:0;">V-Study AI</h2>
-            <p style="opacity:.7;">
-                Learn smarter.<br>
-                Study better.<br>
-                Achieve more.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.divider()
-
-    theme_name = st.selectbox(
-        "🌈 Choose Theme",
-        list(THEMES.keys()),
-    )
-
-    st.session_state.dark_mode = st.toggle(
-        "🌙 Dark Mode",
-        value=st.session_state.dark_mode,
-    )
-
-    st.divider()
-
-    tool = st.radio(
-        "✨ Choose a Tool",
-        TOOLS,
-    )
-
-    st.divider()
-
-    if st.button(
-        "🗑️ Clear Chat History",
-        use_container_width=True,
-    ):
-        st.session_state.chat_history = []
-        st.rerun()
-
-    st.caption("V-Study AI • Created by Vishav")
-
-
-# ============================================================
-# SELECT THEME
-# ============================================================
-
-theme = THEMES[theme_name]
-
-if st.session_state.dark_mode:
-
-    background = "#080b14"
-    sidebar_background = "#0d1220"
-    card_background = "#111827"
-    text_color = "#f8fafc"
-    muted_text = "#94a3b8"
-
-else:
-
-    background = theme["background"]
-    sidebar_background = theme["sidebar"]
-    card_background = theme["card"]
-    text_color = theme["text"]
-    muted_text = "#64748b"
-
-
-# ============================================================
-# CSS
-# ============================================================
-
-st.markdown(
-    f"""
-    <style>
-
-    @import url(
-        'https://fonts.googleapis.com/css2?family=Poppins:
-        wght@400;500;600;700;800&display=swap'
-    );
-
-    .stApp {{
-        background: {background};
-        color: {text_color};
-    }}
-
-    section[data-testid="stSidebar"] {{
-        background: {sidebar_background};
-    }}
-
-    html, body, [class*="css"] {{
-        font-family: 'Poppins', sans-serif;
-    }}
-
-    .block-container {{
-        max-width: 1200px;
-        padding-top: 2rem;
-        padding-bottom: 4rem;
-    }}
-
-    .hero {{
-        padding: 30px;
-        border-radius: 28px;
-        margin-bottom: 25px;
-
-        background:
-            linear-gradient(
-                135deg,
-                {theme["primary"]}22,
-                {theme["secondary"]}22
-            );
-
-        border:
-            1px solid
-            {theme["primary"]}44;
-
-        box-shadow:
-            0 15px 40px rgba(0,0,0,.06);
-    }}
-
-    .hero-title {{
-        font-size: 42px;
-        font-weight: 800;
-        margin: 0;
-    }}
-
-    .hero-subtitle {{
-        color: {muted_text};
-        font-size: 17px;
-        margin-top: 8px;
-    }}
-
-    .tool-card {{
-        padding: 20px;
-        border-radius: 22px;
-        background: {card_background};
-        border:
-            1px solid
-            {theme["primary"]}22;
-
-        margin: 12px 0;
-
-        box-shadow:
-            0 8px 30px rgba(0,0,0,.04);
-    }}
-
-    .ai-response {{
-        padding: 24px;
-        border-radius: 20px;
-
-        background: {card_background};
-
-        border-left:
-            5px solid
-            {theme["primary"]};
-
-        box-shadow:
-            0 10px 30px rgba(0,0,0,.06);
-
-        line-height: 1.75;
-
-        white-space: pre-wrap;
-    }}
-
-    .history-card {{
-        padding: 18px;
-        border-radius: 16px;
-
-        background:
-            {theme["primary"]}10;
-
-        border:
-            1px solid
-            {theme["primary"]}22;
-
-        margin-bottom: 12px;
-    }}
-
-    div.stButton > button {{
-        border-radius: 14px;
-        font-weight: 600;
-    }}
-
-    textarea {{
-        border-radius: 16px !important;
-    }}
-
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-# ============================================================
-# OPENAI CLIENT
-# ============================================================
-
-try:
-
-    api_key = st.secrets.get("OPENAI_API_KEY")
-
-except Exception:
-
-    api_key = None
-
-
-client = None
-
-if api_key:
-
-    try:
-        client = OpenAI(api_key=api_key)
-    except Exception:
-        client = None
-
-
-# ============================================================
-# AI FUNCTION
-# ============================================================
-
-def ask_ai(user_prompt, selected_tool):
-
-    if not client:
-
-        return (
-            "⚠️ **OpenAI API key not configured.**\n\n"
-            "Add your key to Streamlit Secrets as:\n\n"
-            "`OPENAI_API_KEY = \"your-key\"`\n\n"
-            "Then restart the app."
-        )
-
-    instruction = TOOL_INSTRUCTIONS.get(
-        selected_tool,
-        "Help the student clearly and accurately.",
-    )
-
-    system_prompt = f"""
-You are V-Study AI, an AI study assistant created by Vishav.
-
-You help students learn, revise, understand difficult concepts,
-prepare for exams and organize their studies.
-
-Your personality:
-- Friendly
-- Clear
-- Encouraging
-- Accurate
-- Student-friendly
-
-Do not unnecessarily make answers long.
-
-Selected tool:
-{selected_tool}
-
-Tool instructions:
-{instruction}
-
-Always prioritize understanding over simply giving an answer.
+.genie-bubble {
+    background: #ffffffa8;
+    padding: 16px;
+    margin: 12px 0;
+    border-radius: 14px;
+    border-left: 4px solid #a88bff;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+</style>
 """
+st.markdown(custom_css, unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# HEADER
+# ---------------------------------------------------
+st.markdown(
+    "<h1 style='text-align:center;color:#4a3b8f;'>✨ StudyGenie AI – Your Personal AI Study Bestie 💕</h1>",
+    unsafe_allow_html=True
+)
+st.markdown(
+    "<p style='text-align:center;color:#5f569b;font-size:18px;'>Always here for your doubts, your dreams, and your glow-up ✨</p>",
+    unsafe_allow_html=True
+)
+
+# ---------------------------------------------------
+# AI CALL (GPT-5-mini)
+# ---------------------------------------------------
+
+def ask_ai(prompt):
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {st.secrets['OPENAI_API_KEY']}"
+    }
+
+    payload = {
+        "model": "gpt-4.1-mini",  # safest + closest to GPT-5-mini tier
+        "messages": [{
+            "role": "user",
+            "content": (
+                "Your personality: warm, personal, encouraging, Gen-Z soft tone.\n"
+                "Always reply short, crisp, helpful.\n\n" + prompt
+            )
+        }],
+        "max_tokens": 1500,
+        "temperature": 0.65
+    }
 
     try:
-
-        response = client.responses.create(
-
-            model="gpt-5.6",
-
-            instructions=system_prompt,
-
-            input=user_prompt,
-
+        req = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=25
         )
+        result = req.json()
 
-        answer = response.output_text
+        if "choices" not in result:
+            return "⚠️ Bestie the AI got confused for a sec—try again."
 
-        if not answer:
-            answer = "I couldn't generate an answer. Please try again."
+        return result["choices"][0]["message"]["content"]
 
-        st.session_state.chat_history.append(
-            {
-                "tool": selected_tool,
-                "you": user_prompt,
-                "ai": answer,
-            }
-        )
-
-        return answer
-
-    except Exception as error:
-
-        return (
-            "❌ **Something went wrong.**\n\n"
-            f"`{error}`\n\n"
-            "Please check your API key, model access and internet connection."
-        )
+    except Exception as e:
+        return "❌ Error: " + str(e)
 
 
-# ============================================================
-# HERO
-# ============================================================
+# ---------------------------------------------------
+# SIDEBAR — ALL ADVANCED FEATURES
+# ---------------------------------------------------
 
-st.markdown(
-    f"""
-    <div class="hero">
-
-        <div style="font-size:18px;">
-            ✨ Your personal AI study partner
-        </div>
-
-        <div class="hero-title">
-            V-Study AI
-        </div>
-
-        <div class="hero-subtitle">
-            Learn smarter. Study better. Achieve more. 🚀
-        </div>
-
-    </div>
-    """,
-    unsafe_allow_html=True,
+tool = st.sidebar.radio(
+    "✨ Choose your tool",
+    [
+        "AI Doubt Solver",
+        "Notes Generator",
+        "Summary Maker",
+        "Timetable Builder",
+        "Motivation Booster",
+        "Flashcards",
+        "Brain-Dump Cleaner",
+        "Answer Checker",
+        "AI Planner",
+        "Mindset Reset",
+        "Study Routine Designer",
+        "Exam Strategy Maker",
+        "Personal Study Coach"
+    ]
 )
 
+# ---------------------------------------------------
+# FEATURE: AI DOUBT SOLVER
+# ---------------------------------------------------
 
-# ============================================================
-# TOOL HEADER
-# ============================================================
+if tool == "AI Doubt Solver":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("💡 Ask your doubt")
 
-st.markdown(
-    f"""
-    <div class="tool-card">
+    q = st.text_area("Your question bestie:")
 
-        <h2 style="margin:0;">
-            ✨ {tool}
-        </h2>
+    if st.button("Solve it 💜"):
+        if q.strip():
+            with st.spinner("Thinking like a genius bestie..."):
+                ans = ask_ai(q)
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+        else:
+            st.warning("Write your doubt babe 💕")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        <p style="color:{muted_text};">
-            Use V-Study AI to make your study session easier.
-        </p>
+# ---------------------------------------------------
+# NOTES GENERATOR
+# ---------------------------------------------------
 
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+elif tool == "Notes Generator":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("📘 Aesthetic Notes")
 
+    topic = st.text_input("Topic:")
+    if st.button("Generate Notes ✨"):
+        if topic.strip():
+            ans = ask_ai(f"Make crisp cute notes on: {topic}")
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ============================================================
+# ---------------------------------------------------
+# SUMMARY MAKER
+# ---------------------------------------------------
+
+elif tool == "Summary Maker":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("🧾 Ultra Summary")
+
+    txt = st.text_area("Paste something to summarize:")
+
+    if st.button("Summarize ✨"):
+        if txt.strip():
+            ans = ask_ai("Summarize this clearly, short, crisp:\n" + txt)
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# TIMETABLE BUILDER
+# ---------------------------------------------------
+
+elif tool == "Timetable Builder":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("📅 Cute Study Timetable")
+
+    subjects = st.text_input("Subjects separated with commas:")
+    hrs = st.slider("Hours per day:", 1, 12, 5)
+
+    if st.button("Create ✨"):
+        if subjects.strip():
+            subs = [s.strip() for s in subjects.split(",")]
+            each = round(hrs / len(subs), 2)
+
+            output = "✨ **Your Aesthetic Timetable**\n"
+            for s in subs:
+                output += f"📘 {s}: **{each} hours**\n"
+
+            st.markdown(f"<div class='genie-bubble'>{output}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------------------------------------
 # MOTIVATION BOOSTER
-# ============================================================
+# ---------------------------------------------------
 
-if tool == "Motivation Booster":
+elif tool == "Motivation Booster":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("🔥 Motivation ")
 
     quotes = [
-
-        "You don't need perfect motivation. Start with the next 20 minutes. 🔥",
-
-        "Small progress is still progress. Keep moving. ✨",
-
-        "Future-you will be glad you started today. 📚",
-
-        "Focus on the next task, not the entire mountain. 🧠",
-
-        "Consistency beats waiting for the perfect mood. 🚀",
-
+        "Your efforts today shape the life you will enjoy tomorrow.",
+        "You deserve peace, progress, and pride in your work.",
+        "Every step forward—no matter how small—counts.",
+        "The future you imagine can become real with consistent effort.",
+        "Your hard work will become your comfort one day.",
+        "Strength grows every time you choose discipline.",
+        "The version of you that you are building is outstanding.",
+        "You do not need perfection, you only need consistency.",
+        "Your dreams are possible because you are capable.",
+        "Your dedication will lead to extraordinary results."
     ]
 
-    if st.button(
-        "🔥 Give Me a Boost",
-        type="primary",
-        use_container_width=True,
-    ):
-
-        quote = random.choice(quotes)
-
+    if st.button("Boost Me ✨"):
         st.markdown(
-            f"""
-            <div class="ai-response">
-                {quote}
-            </div>
-            """,
-            unsafe_allow_html=True,
+            f"<div class='genie-bubble'>{random.choice(quotes)}</div>",
+            unsafe_allow_html=True
         )
+    st.markdown("</div>", unsafe_allow_html=True)
 
+# ---------------------------------------------------
+# MORE FEATURES BELOW (FULLY WORKING)
+# ---------------------------------------------------
 
-# ============================================================
-# ALL OTHER TOOLS
-# ============================================================
+elif tool == "Flashcards":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("🃏 Flashcards")
 
-else:
+    topic = st.text_input("Topic:")
 
-    prompt = st.text_area(
-        "💬 What do you want V-Study AI to help with?",
-        placeholder=EXAMPLES.get(
-            tool,
-            "Ask your study question..."
-        ),
-        height=200,
-    )
+    if st.button("Generate Flashcards ✨"):
+        if topic.strip():
+            ans = ask_ai(f"Make 6 simple flashcards for: {topic}")
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns([3, 1])
+elif tool == "Brain-Dump Cleaner":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("🧠 Clean up your thoughts")
 
-    with col1:
+    dump = st.text_area("What is messy inside your brain:")
 
-        generate = st.button(
-            "✨ Generate with V-Study AI",
-            type="primary",
-            use_container_width=True,
-        )
+    if st.button("Organize It ✨"):
+        if dump.strip():
+            ans = ask_ai("Organize this neatly:\n" + dump)
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with col2:
+elif tool == "Answer Checker":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("✔️ Check Your Answer")
 
-        example_button = st.button(
-            "💡 Example",
-            use_container_width=True,
-        )
+    your = st.text_area("Your Answer:")
+    corr = st.text_area("Correct Answer:")
 
-    if example_button:
+    if st.button("Check ✨"):
+        if your.strip() and corr.strip():
+            ans = ask_ai(f"Compare student's answer to correct answer. Short, clear. Student: {your}. Correct: {corr}.")
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-        st.info(
-            EXAMPLES.get(
-                tool,
-                "Explain this topic simply."
-            )
-        )
+elif tool == "AI Planner":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("📆 Daily Study Planner")
 
-    if generate:
+    goal = st.text_input("Your goal:")
 
-        if not prompt.strip():
+    if st.button("Make Plan ✨"):
+        if goal.strip():
+            ans = ask_ai(f"Make a simple, clean daily plan for this goal: {goal}")
+            st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-            st.warning(
-                "Please enter a question or topic first."
-            )
+# ---------------------------------------------------
+# NEW: Mindset Reset
+# ---------------------------------------------------
 
-        else:
+elif tool == "Mindset Reset":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("🌸 Mindset Reset")
 
-            with st.spinner(
-                "🤖 V-Study AI is thinking..."
-            ):
+    if st.button("Reset My Mind ✨"):
+        ans = ask_ai("Give a clean mindset reset, encouraging energy, long enough but not too long.")
+        st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-                answer = ask_ai(
-                    prompt.strip(),
-                    tool,
-                )
+# ---------------------------------------------------
+# NEW: Study Routine Designer
+# ---------------------------------------------------
 
-            st.markdown(
-                "### 🤖 V-Study AI"
-            )
+elif tool == "Study Routine Designer":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("📚 Study Routine Designer")
 
-            st.markdown(
-                f"""
-                <div class="ai-response">
-                    {answer}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    hours = st.slider("How many hours you can study daily:", 1, 10, 4)
 
+    if st.button("Design Routine ✨"):
+        ans = ask_ai(f"Create a daily study routine for {hours} hours. Make it aesthetic, clean.")
+        st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# ============================================================
-# CHAT HISTORY
-# =================================================
+# ---------------------------------------------------
+# NEW: Exam Strategy Maker
+# ---------------------------------------------------
+
+elif tool == "Exam Strategy Maker":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("🎯 Exam Strategy")
+
+    exam = st.text_input("Your exam:")
+
+    if st.button("Build Strategy ✨"):
+        ans = ask_ai(f"Make a high-impact exam strategy for: {exam}")
+        st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ---------------------------------------------------
+# NEW: Personal Study Coach
+# ---------------------------------------------------
+
+elif tool == "Personal Study Coach":
+    st.markdown("<div class='section'>", unsafe_allow_html=True)
+    st.subheader("💞 StudyCoach – Personal Guidance")
+
+    msg = st.text_area("Tell me what you’re struggling with:")
+
+    if st.button("Coach Me ✨"):
+        ans = ask_ai(f"You are their personal study coach. Respond to this with soft tone: {msg}")
+        st.markdown(f"<div class='genie-bubble'>{ans}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
